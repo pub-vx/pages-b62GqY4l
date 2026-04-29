@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>성과 보고서 — 2.0 배포 이후</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Helvetica Neue','Apple SD Gothic Neo',sans-serif;background:#0f1419;color:#e6e6e6;line-height:1.6;padding:24px}
+.container{max-width:1320px;margin:0 auto}
+.hero{background:linear-gradient(135deg,#1e2a5f 0%,#0d1535 100%);padding:36px;border-radius:16px;margin-bottom:24px;border:1px solid #2a3f5f}
+.hero h1{font-size:28px;color:#fff;margin-bottom:8px}
+.hero .subtitle{font-size:14px;color:#9ab}
+.hero .meta{margin-top:16px;font-size:13px;color:#7a8b9f;display:flex;gap:24px;flex-wrap:wrap}
+.hero .meta b{color:#bcd}
+.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700;background:#3b82f6;color:#fff;margin-bottom:12px}
+
+.section{background:#161b22;padding:28px;border-radius:12px;margin-bottom:20px;border:1px solid #2a3441}
+.section h2{font-size:20px;color:#fff;margin-bottom:6px}
+.section .desc{font-size:13px;color:#7a8b9f;margin-bottom:20px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi{background:#1c2330;padding:18px;border-radius:10px;border:1px solid #2f3a4d}
+.kpi.highlight{border-color:#3b82f6;background:linear-gradient(135deg,#1c2330,#1e2a4a)}
+.kpi .label{font-size:11px;color:#7a8b9f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.kpi .value{font-size:26px;font-weight:700;color:#fff}
+.kpi .sub{font-size:11px;color:#9ab;margin-top:4px}
+.kpi.green .value{color:#4ade80}
+.kpi.blue .value{color:#60a5fa}
+.kpi.yellow .value{color:#fbbf24}
+.kpi.red .value{color:#f87171}
+
+.funnel{position:relative;padding:0 0 0 0}
+.funnel-row{display:flex;align-items:stretch;margin-bottom:2px}
+.funnel-node{padding:14px 18px;border-radius:8px;position:relative;display:flex;flex-direction:column;justify-content:center}
+.funnel-node .fn-label{font-size:11px;color:#9ab;margin-bottom:2px}
+.funnel-node .fn-value{font-size:22px;font-weight:700;color:#fff}
+.funnel-node .fn-pct{font-size:12px;font-weight:600;margin-top:2px}
+.funnel-node .fn-sub{font-size:11px;color:#7a8b9f;margin-top:3px}
+.funnel-node.root{background:linear-gradient(135deg,#1e3a5f,#1a2535);border:1px solid #3b82f6;min-width:200px}
+.funnel-node.decided{background:#1c2330;border:1px solid #2f3a4d;min-width:180px}
+.funnel-node.approved{background:linear-gradient(135deg,#0d2818,#1c2330);border:1px solid #22c55e}
+.funnel-node.terminated{background:linear-gradient(135deg,#2d0d0d,#1c2330);border:1px solid #ef4444}
+.funnel-node.incomplete{background:#1c2330;border:1px solid #f59e0b}
+.funnel-node.auto{background:linear-gradient(135deg,#0d2818,#162a1a);border:1px solid #4ade80}
+.funnel-node.manual{background:#1c2330;border:1px solid #60a5fa}
+.funnel-connector{display:flex;flex-direction:column;justify-content:center;align-items:center;width:40px;min-width:40px;color:#4a5568;font-size:18px}
+.funnel-branch{display:flex;flex-direction:column;gap:2px;flex:1}
+.funnel-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:14px;padding:12px;background:#0d1117;border-radius:8px}
+.funnel-metric{text-align:center}
+.funnel-metric .fm-label{font-size:10px;color:#7a8b9f;text-transform:uppercase}
+.funnel-metric .fm-value{font-size:16px;font-weight:700;color:#fff;margin-top:2px}
+
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{background:#1f2937;color:#cdd;padding:10px 12px;font-size:12px;text-align:left;border-bottom:1px solid #2a3441}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid #1f2733;color:#cdd}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.num b{color:#fff}
+tr.current{background:#1a2535}
+
+.delta{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-left:6px}
+.delta.up{background:#0d2818;color:#4ade80}
+.delta.down{background:#3a1818;color:#f87171}
+.delta.flat{background:#1f2733;color:#9ab}
+
+.channel-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-right:8px}
+.channel-tag.onsite{background:#1e3a5f;color:#7dd3fc}
+.channel-tag.deposit{background:#3a1e5f;color:#c4b5fd}
+
+.chart-wrap{background:#0d1117;padding:18px;border-radius:8px;height:320px;margin-top:12px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+.insight{background:#0d2818;border-left:4px solid #4ade80;padding:14px 18px;border-radius:6px;margin-top:14px}
+.insight.warn{background:#2d1e0d;border-left-color:#f59e0b}
+.insight.bad{background:#2d0d0d;border-left-color:#f87171}
+.insight h4{font-size:13px;margin-bottom:4px}
+.insight.warn h4{color:#fbbf24}
+.insight.bad h4{color:#f87171}
+.insight:not(.warn):not(.bad) h4{color:#4ade80}
+.insight p{color:#cdd;font-size:12px}
+
+.good{color:#4ade80}
+.bad{color:#f87171}
+.neutral{color:#fbbf24}
+
+.top-list{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.top-list .rank{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1c2330;border-radius:8px;margin-bottom:4px}
+.top-list .rank .num{color:#3b82f6;font-weight:700;font-size:14px;min-width:24px}
+.top-list .rank .name{color:#cdd;font-size:13px;flex:1}
+.top-list .rank .cnt{color:#9ab;font-size:12px}
+.channel-toggle summary{list-style:none}
+.channel-toggle summary::-webkit-details-marker{display:none}
+.channel-toggle[open] summary{color:#fff !important}
+.channel-toggle summary:hover{opacity:0.8}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+  <div class="badge">2.0 배포 이후</div>
+  <h1>가격조정 워크플로우 성과 보고서</h1>
+  <div class="subtitle">v2.0 배포(12/11) 이후 전체 누적 데이터</div>
+  <div class="meta">
+    <span>데이터: <b>2025-12-11 ~ 2026-04-10</b></span>
+    <span>소스: <b>workflow_metrics (MongoDB)</b></span>
+    <span>전체 인입: <b>15,951건</b></span>
+    <span>가격조정: <b>1,472건</b> (9.2%)</span>
+    <span>생성: <b>2026-04-13</b></span>
+  </div>
+</div>
+
+<!-- 1. 전체 워크플로우 인입 → 분류 -->
+<div class="section">
+  <h2>1. 워크플로우 전체 인입</h2>
+  <div class="desc">워크플로우로 들어온 모든 건수에서 유형별 분류</div>
+  <div class="kpi-grid">
+    <div class="kpi highlight">
+  <div class="label">전체 인입</div>
+  <div class="value">15,951건</div>
+  <div class="sub">워크플로우 총 인입량</div>
+</div>
+    <div class="kpi blue">
+  <div class="label">일반 문의</div>
+  <div class="value">11,577건</div>
+  <div class="sub">전체의 72.6% (폴백 0건 포함)</div>
+</div>
+    <div class="kpi ">
+  <div class="label">운영팀 메시지</div>
+  <div class="value">2,902건</div>
+  <div class="sub">전체의 18.2%</div>
+</div>
+    <div class="kpi green">
+  <div class="label">가격 조정</div>
+  <div class="value">1,472건</div>
+  <div class="sub">전체의 9.2% — 슬랙 발송된 건만</div>
+</div>
+  </div>
+
+  <div style="margin-top:16px;display:flex;align-items:center;gap:0;height:36px;border-radius:8px;overflow:hidden;font-size:12px;font-weight:600">
+    <div style="background:#3b82f6;width:72.6%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;min-width:60px">일반 문의 73%</div>
+    <div style="background:#6b7280;width:18.2%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;min-width:60px">운영팀 18%</div>
+    <div style="background:#10b981;width:9.2%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;min-width:60px">가격조정 9%</div>
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:#7a8b9f">가격조정 분류 후 추출 0건인 0건은 일반문의로 재분류. <b>가격 조정 1,472건</b>만 슬랙 발송 후 승인/종료 워크플로우 진행.</div>
+</div>
+
+<!-- 2. 가격조정 상세: 채널 분류 -->
+<div class="section">
+  <h2>2. 가격조정 → 채널 분류</h2>
+  <div class="desc">가격조정 1,472건을 골프장 로직 타입으로 현장결제/예치금선결제 분류</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi highlight">
+  <div class="label">가격조정 총건수</div>
+  <div class="value">1,472건</div>
+  <div class="sub">승인/종료 워크플로우 대상</div>
+</div>
+    <div class="kpi blue">
+  <div class="label">현장결제</div>
+  <div class="value">1,275건</div>
+  <div class="sub">가격조정의 87% · 기본 로직</div>
+</div>
+    <div class="kpi yellow">
+  <div class="label">예치금/선결제</div>
+  <div class="value">197건</div>
+  <div class="sub">가격조정의 13% · 변환 로직(PP/OS)</div>
+</div>
+  </div>
+</div>
+
+<!-- 3. 가격조정 핵심 지표 — 퍼널 트리 -->
+<div class="section">
+  <h2>3. 가격조정 핵심 지표</h2>
+  <div class="desc">슬랙 발송된 가격조정 1,472건의 처리 흐름 — 결정완료/미완료 → 승인/종료 → 수정여부</div>
+
+  
+  <h3 style="color:#7dd3fc;font-size:15px;margin-bottom:14px">
+    <span class="channel-tag onsite">전체 (현장결제 + 예치금선결제)</span>
+  </h3>
+  
+    <!-- 핵심 지표 요약 — 높은 수치순 -->
+    <div class="funnel-metrics">
+      <div class="funnel-metric"><div class="fm-label">필드 정확도</div><div class="fm-value" style="color:#f0abfc">93.1%</div><div style="font-size:10px;color:#7a8b9f">15개 필드 평균</div><div style="font-size:9px;color:#5a6577">BookFee 2,414건 비교</div></div>
+      <div class="funnel-metric">
+        <div class="fm-label">승인률</div>
+        <div class="fm-value" style="color:#4ade80">50.7%</div>
+        <div style="font-size:10px;color:#7a8b9f">(수정없이+수정후) 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">자동처리율</div>
+        <div class="fm-value" style="color:#60a5fa">16.2%</div>
+        <div style="font-size:10px;color:#7a8b9f">수정없이 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">처리시간 (중앙값)</div>
+        <div class="fm-value">29m</div>
+        <div style="font-size:10px;color:#7a8b9f">인입 → 최종처리</div>
+      </div>
+    </div>
+
+  <div class="funnel" style="margin-top:16px">
+    
+    <div class="funnel-row">
+      <div class="funnel-node root" style="width:100%">
+        <div class="fn-label">슬랙 발송 건수</div>
+        <div class="fn-value">1,472건</div>
+        <div class="fn-sub">가격조정 워크플로우 → 슬랙 전송 완료</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#4a5568;font-size:14px;padding:4px 0">▼</div>
+
+
+    <!-- 최종승인 + 종료 + 미완료 — 비율 flex -->
+    <div style="display:flex;gap:6px">
+      <div class="funnel-node approved" style="flex:447;min-width:120px">
+        <div class="fn-label">최종승인</div>
+        <div class="fn-value">447건</div>
+        <div class="fn-pct" style="color:#4ade80">30.4%</div>
+      </div>
+      <div class="funnel-node terminated" style="flex:434;min-width:120px">
+        <div class="fn-label">종료</div>
+        <div class="fn-value">434건</div>
+        <div class="fn-pct" style="color:#f87171">29.5%</div>
+      </div>
+      <div class="funnel-node incomplete" style="flex:591;min-width:120px">
+        <div class="fn-sub" style="margin-bottom:2px">운영팀 미처리</div>
+        <div class="fn-label">미완료</div>
+        <div class="fn-value">591건</div>
+        <div class="fn-pct" style="color:#fbbf24">40.1%</div>
+      </div>
+    </div>
+    <div style="color:#4a5568;font-size:14px;padding:4px 0;width:59.9%;text-align:center">▼</div>
+
+    <!-- 수정여부 분기 — 승인/종료 각각 부모 비율 -->
+    <div style="display:flex;gap:6px;width:59.9%">
+      <div style="flex:447;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node auto" style="flex:143;min-width:120px">
+          <div class="fn-label">수정없이 승인</div>
+          <div class="fn-value" style="white-space:nowrap">143건</div>
+          <div class="fn-pct" style="color:#4ade80">승인의 32.0%</div>
+        </div>
+        <div class="funnel-node manual" style="flex:304;min-width:120px">
+          <div class="fn-label">수정 후 승인</div>
+          <div class="fn-value" style="white-space:nowrap">304건</div>
+          <div class="fn-pct" style="color:#60a5fa">승인의 68.0%</div>
+        </div>
+      </div>
+      <div style="flex:434;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:422;min-width:120px">
+          <div class="fn-label">수정없이 종료</div>
+          <div class="fn-value" style="white-space:nowrap">422건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 97.2%</div>
+        </div>
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:12;min-width:120px">
+          <div class="fn-label">수정 후 종료</div>
+          <div class="fn-value" style="white-space:nowrap">12건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 2.8%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <details class="channel-toggle" style="margin-top:28px;border-top:1px solid #2a3441;padding-top:20px">
+    <summary style="cursor:pointer;color:#7dd3fc;font-size:14px;font-weight:600;padding:8px 0;user-select:none">
+      ▶ 현장결제 상세 퍼널 (1,275건)
+    </summary>
+    <div style="margin-top:16px">
+      
+  <h3 style="color:#7dd3fc;font-size:15px;margin-bottom:14px">
+    <span class="channel-tag onsite">현장결제</span>
+  </h3>
+  
+    <!-- 핵심 지표 요약 — 높은 수치순 -->
+    <div class="funnel-metrics">
+      <div class="funnel-metric"><div class="fm-label">필드 정확도</div><div class="fm-value" style="color:#f0abfc">92.7%</div><div style="font-size:10px;color:#7a8b9f">15개 필드 평균</div><div style="font-size:9px;color:#5a6577">BookFee 1,860건 비교</div></div>
+      <div class="funnel-metric">
+        <div class="fm-label">승인률</div>
+        <div class="fm-value" style="color:#4ade80">50.6%</div>
+        <div style="font-size:10px;color:#7a8b9f">(수정없이+수정후) 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">자동처리율</div>
+        <div class="fm-value" style="color:#60a5fa">16.3%</div>
+        <div style="font-size:10px;color:#7a8b9f">수정없이 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">처리시간 (중앙값)</div>
+        <div class="fm-value">33m</div>
+        <div style="font-size:10px;color:#7a8b9f">인입 → 최종처리</div>
+      </div>
+    </div>
+
+  <div class="funnel" style="margin-top:16px">
+    
+    <div class="funnel-row">
+      <div class="funnel-node root" style="width:100%">
+        <div class="fn-label">슬랙 발송 건수</div>
+        <div class="fn-value">1,275건</div>
+        <div class="fn-sub">가격조정 워크플로우 → 슬랙 전송 완료</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#4a5568;font-size:14px;padding:4px 0">▼</div>
+
+
+    <!-- 최종승인 + 종료 + 미완료 — 비율 flex -->
+    <div style="display:flex;gap:6px">
+      <div class="funnel-node approved" style="flex:376;min-width:120px">
+        <div class="fn-label">최종승인</div>
+        <div class="fn-value">376건</div>
+        <div class="fn-pct" style="color:#4ade80">29.5%</div>
+      </div>
+      <div class="funnel-node terminated" style="flex:367;min-width:120px">
+        <div class="fn-label">종료</div>
+        <div class="fn-value">367건</div>
+        <div class="fn-pct" style="color:#f87171">28.8%</div>
+      </div>
+      <div class="funnel-node incomplete" style="flex:532;min-width:120px">
+        <div class="fn-sub" style="margin-bottom:2px">운영팀 미처리</div>
+        <div class="fn-label">미완료</div>
+        <div class="fn-value">532건</div>
+        <div class="fn-pct" style="color:#fbbf24">41.7%</div>
+      </div>
+    </div>
+    <div style="color:#4a5568;font-size:14px;padding:4px 0;width:58.3%;text-align:center">▼</div>
+
+    <!-- 수정여부 분기 — 승인/종료 각각 부모 비율 -->
+    <div style="display:flex;gap:6px;width:58.3%">
+      <div style="flex:376;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node auto" style="flex:121;min-width:120px">
+          <div class="fn-label">수정없이 승인</div>
+          <div class="fn-value" style="white-space:nowrap">121건</div>
+          <div class="fn-pct" style="color:#4ade80">승인의 32.2%</div>
+        </div>
+        <div class="funnel-node manual" style="flex:255;min-width:120px">
+          <div class="fn-label">수정 후 승인</div>
+          <div class="fn-value" style="white-space:nowrap">255건</div>
+          <div class="fn-pct" style="color:#60a5fa">승인의 67.8%</div>
+        </div>
+      </div>
+      <div style="flex:367;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:357;min-width:120px">
+          <div class="fn-label">수정없이 종료</div>
+          <div class="fn-value" style="white-space:nowrap">357건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 97.3%</div>
+        </div>
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:10;min-width:120px">
+          <div class="fn-label">수정 후 종료</div>
+          <div class="fn-value" style="white-space:nowrap">10건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 2.7%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    </div>
+  </details>
+
+  <details class="channel-toggle" style="margin-top:16px;border-top:1px solid #2a3441;padding-top:20px">
+    <summary style="cursor:pointer;color:#c4b5fd;font-size:14px;font-weight:600;padding:8px 0;user-select:none">
+      ▶ 예치금/선결제 상세 퍼널 (197건)
+    </summary>
+    <div style="margin-top:16px">
+      
+  <h3 style="color:#c4b5fd;font-size:15px;margin-bottom:14px">
+    <span class="channel-tag deposit">예치금/선결제</span>
+  </h3>
+  
+    <!-- 핵심 지표 요약 — 높은 수치순 -->
+    <div class="funnel-metrics">
+      <div class="funnel-metric"><div class="fm-label">필드 정확도</div><div class="fm-value" style="color:#f0abfc">94.6%</div><div style="font-size:10px;color:#7a8b9f">15개 필드 평균</div><div style="font-size:9px;color:#5a6577">BookFee 554건 비교</div></div>
+      <div class="funnel-metric">
+        <div class="fm-label">승인률</div>
+        <div class="fm-value" style="color:#4ade80">51.4%</div>
+        <div style="font-size:10px;color:#7a8b9f">(수정없이+수정후) 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">자동처리율</div>
+        <div class="fm-value" style="color:#60a5fa">15.9%</div>
+        <div style="font-size:10px;color:#7a8b9f">수정없이 승인 / 결정완료</div>
+      </div>
+      <div class="funnel-metric">
+        <div class="fm-label">처리시간 (중앙값)</div>
+        <div class="fm-value">10m</div>
+        <div style="font-size:10px;color:#7a8b9f">인입 → 최종처리</div>
+      </div>
+    </div>
+
+  <div class="funnel" style="margin-top:16px">
+    
+    <div class="funnel-row">
+      <div class="funnel-node root" style="width:100%">
+        <div class="fn-label">슬랙 발송 건수</div>
+        <div class="fn-value">197건</div>
+        <div class="fn-sub">가격조정 워크플로우 → 슬랙 전송 완료</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#4a5568;font-size:14px;padding:4px 0">▼</div>
+
+
+    <!-- 최종승인 + 종료 + 미완료 — 비율 flex -->
+    <div style="display:flex;gap:6px">
+      <div class="funnel-node approved" style="flex:71;min-width:120px">
+        <div class="fn-label">최종승인</div>
+        <div class="fn-value">71건</div>
+        <div class="fn-pct" style="color:#4ade80">36.0%</div>
+      </div>
+      <div class="funnel-node terminated" style="flex:67;min-width:120px">
+        <div class="fn-label">종료</div>
+        <div class="fn-value">67건</div>
+        <div class="fn-pct" style="color:#f87171">34.0%</div>
+      </div>
+      <div class="funnel-node incomplete" style="flex:59;min-width:120px">
+        <div class="fn-sub" style="margin-bottom:2px">운영팀 미처리</div>
+        <div class="fn-label">미완료</div>
+        <div class="fn-value">59건</div>
+        <div class="fn-pct" style="color:#fbbf24">29.9%</div>
+      </div>
+    </div>
+    <div style="color:#4a5568;font-size:14px;padding:4px 0;width:70.1%;text-align:center">▼</div>
+
+    <!-- 수정여부 분기 — 승인/종료 각각 부모 비율 -->
+    <div style="display:flex;gap:6px;width:70.1%">
+      <div style="flex:71;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node auto" style="flex:22;min-width:120px">
+          <div class="fn-label">수정없이 승인</div>
+          <div class="fn-value" style="white-space:nowrap">22건</div>
+          <div class="fn-pct" style="color:#4ade80">승인의 31.0%</div>
+        </div>
+        <div class="funnel-node manual" style="flex:49;min-width:120px">
+          <div class="fn-label">수정 후 승인</div>
+          <div class="fn-value" style="white-space:nowrap">49건</div>
+          <div class="fn-pct" style="color:#60a5fa">승인의 69.0%</div>
+        </div>
+      </div>
+      <div style="flex:67;display:flex;gap:4px;min-width:0">
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:65;min-width:120px">
+          <div class="fn-label">수정없이 종료</div>
+          <div class="fn-value" style="white-space:nowrap">65건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 97.0%</div>
+        </div>
+        <div class="funnel-node" style="background:#1c2330;border:1px solid #2f3a4d;flex:2;min-width:120px">
+          <div class="fn-label">수정 후 종료</div>
+          <div class="fn-value" style="white-space:nowrap">2건</div>
+          <div class="fn-pct" style="color:#9ab">종료의 3.0%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    </div>
+  </details>
+</div>
+
+<!-- 필드별 정확도 -->
+<div class="section">
+  <h2>4. 필드별 추출 정확도 (BookFee 비교)</h2>
+  <div class="desc">AI 추출값(temp_request_data) vs 실제 등록값(BookFee) 비교 · 2,414건 매칭 · 전체 필드 일치율 <b>93.1%</b></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="chart-wrap" style="height:380px">
+        <canvas id="fieldAccChart"></canvas>
+      </div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>필드</th><th>정확도</th><th>일치/전체</th><th>평가</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">bookName</td><td class="num"><b>66.5%</b></td><td class="num">1,605/2,414</td><td><span style="color:#f97316">●</span> 보통</td></tr>
+<tr><td style="font-weight:600">weekBit</td><td class="num"><b>81.9%</b></td><td class="num">1,976/2,414</td><td><span style="color:#f97316">●</span> 보통</td></tr>
+<tr><td style="font-weight:600">visitorCnt</td><td class="num"><b>87.9%</b></td><td class="num">2,122/2,414</td><td><span style="color:#fbbf24">●</span> 양호</td></tr>
+<tr><td style="font-weight:600">bookETime</td><td class="num"><b>91.5%</b></td><td class="num">2,209/2,414</td><td><span style="color:#fbbf24">●</span> 양호</td></tr>
+<tr><td style="font-weight:600">bookSTime</td><td class="num"><b>92.3%</b></td><td class="num">2,229/2,414</td><td><span style="color:#fbbf24">●</span> 양호</td></tr>
+<tr><td style="font-weight:600">courseSeq</td><td class="num"><b>94.2%</b></td><td class="num">2,275/2,414</td><td><span style="color:#fbbf24">●</span> 양호</td></tr>
+<tr><td style="font-weight:600">courseName</td><td class="num"><b>94.2%</b></td><td class="num">2,275/2,414</td><td><span style="color:#fbbf24">●</span> 양호</td></tr>
+<tr><td style="font-weight:600">bookEDate</td><td class="num"><b>95.9%</b></td><td class="num">2,314/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">bookSDate</td><td class="num"><b>97.3%</b></td><td class="num">2,349/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">greenFeeDC</td><td class="num"><b>97.9%</b></td><td class="num">2,363/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">greenFeeNO</td><td class="num"><b>98.0%</b></td><td class="num">2,365/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">golfInfoName</td><td class="num"><b>99.3%</b></td><td class="num">2,397/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">holeCnt</td><td class="num"><b>99.8%</b></td><td class="num">2,409/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">golfInfoSeq</td><td class="num"><b>100.0%</b></td><td class="num">2,414/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+<tr><td style="font-weight:600">maxVisitorCnt</td><td class="num"><b>100.0%</b></td><td class="num">2,414/2,414</td><td><span style="color:#4ade80">●</span> 우수</td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:16px">
+    <div class="insight warn">
+      <h4>개선 필요 필드</h4>
+      <p><b>bookName (66.5%)</b> — 이벤트명 정규화/포맷 불일치. <b>weekBit (81.9%)</b> — 요일비트 변환 오차. <b>visitorCnt (87.9%)</b> — 내장인원 추출 개선 여지.</p>
+    </div>
+    <div class="insight">
+      <h4>강점 필드</h4>
+      <p><b>가격 (greenFee 97.9~98.0%)</b>, <b>날짜 (bookSDate 97.3%)</b>, <b>홀수 (99.8%)</b>, <b>골프장 (100%)</b> — LLM 추출 핵심 필드에서 높은 정확도 확인.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 월별 추이 차트 -->
+<div class="section">
+  <h2>5. 월별 추이</h2>
+  <div class="desc">해당 기간 내 월별 인입 건수 및 자동처리율</div>
+  <div class="chart-wrap">
+    <canvas id="monthlyChart"></canvas>
+  </div>
+
+  <!-- 골프장 오픈 시점 인사이트 -->
+  <div style="margin:20px 0;padding:16px 20px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:10px;border-left:4px solid #f59e0b">
+    <h4 style="color:#f59e0b;margin:0 0 10px;font-size:14px">📊 골프장 확장 추이와 자동처리율 변화</h4>
+    <p style="color:#9ca3af;font-size:13px;margin:0 0 12px;line-height:1.6">
+      초기(11~12월) 검증된 골프장 20~31개로 높은 자동처리율을 기록했으나,
+      <b style="color:#fbbf24">1월 대규모 확장(+182개)</b>으로 다양한 포맷/복잡한 케이스가 유입되며 자동처리율이 하락했습니다.
+      3월 이후 v3.0 고도화와 함께 점진적으로 회복 중입니다.
+    </p>
+    <table style="font-size:12px;margin:0">
+      <thead>
+        <tr>
+          <th>월</th><th>신규 골프장</th><th>누적</th><th>현장결제 건수</th><th>자동처리율</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="font-weight:600">2025-12</td><td class="num">+11개</td><td class="num">31개</td><td class="num">75건</td><td class="num"><b>32.0%</b></td></tr>
+<tr><td style="font-weight:600">2026-01</td><td class="num">+182개</td><td class="num">213개</td><td class="num">125건</td><td class="num"><b>9.6%</b></td></tr>
+<tr><td style="font-weight:600">2026-02</td><td class="num">+1개</td><td class="num">214개</td><td class="num">343건</td><td class="num"><b>6.1%</b></td></tr>
+<tr><td style="font-weight:600">2026-03</td><td class="num">+26개</td><td class="num">240개</td><td class="num">613건</td><td class="num"><b>9.8%</b></td></tr>
+<tr><td style="font-weight:600">2026-04</td><td class="num">+0개</td><td class="num">240개</td><td class="num">145건</td><td class="num"><b>12.4%</b></td></tr>
+
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 월별 상세 테이블 -->
+  <table style="margin-top:20px">
+    <thead>
+      <tr>
+        <th rowspan="2">월</th>
+        <th colspan="4" style="text-align:center"><span class="channel-tag onsite">현장결제</span></th>
+        <th colspan="4" style="text-align:center"><span class="channel-tag deposit">예치금선결제</span></th>
+      </tr>
+      <tr>
+        <th>건수</th><th>승인</th><th>자동</th><th>자동처리율</th>
+        <th>건수</th><th>승인</th><th>자동</th><th>자동처리율</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td style="font-weight:600">2025-12</td>
+  <td class="num">75</td>
+  <td class="num">52</td>
+  <td class="num">24</td>
+  <td class="num"><b>32.0%</b></td>
+  <td class="num">0</td>
+  <td class="num">0</td>
+  <td class="num">0</td>
+  <td class="num"><b>0.0%</b></td>
+</tr>
+<tr>
+  <td style="font-weight:600">2026-01</td>
+  <td class="num">125</td>
+  <td class="num">57</td>
+  <td class="num">12</td>
+  <td class="num"><b>9.6%</b></td>
+  <td class="num">6</td>
+  <td class="num">4</td>
+  <td class="num">0</td>
+  <td class="num"><b>0.0%</b></td>
+</tr>
+<tr>
+  <td style="font-weight:600">2026-02</td>
+  <td class="num">343</td>
+  <td class="num">75</td>
+  <td class="num">21</td>
+  <td class="num"><b>6.1%</b></td>
+  <td class="num">30</td>
+  <td class="num">5</td>
+  <td class="num">1</td>
+  <td class="num"><b>3.3%</b></td>
+</tr>
+<tr>
+  <td style="font-weight:600">2026-03</td>
+  <td class="num">613</td>
+  <td class="num">171</td>
+  <td class="num">60</td>
+  <td class="num"><b>9.8%</b></td>
+  <td class="num">117</td>
+  <td class="num">50</td>
+  <td class="num">14</td>
+  <td class="num"><b>12.0%</b></td>
+</tr>
+<tr>
+  <td style="font-weight:600">2026-04</td>
+  <td class="num">145</td>
+  <td class="num">46</td>
+  <td class="num">18</td>
+  <td class="num"><b>12.4%</b></td>
+  <td class="num">44</td>
+  <td class="num">12</td>
+  <td class="num">7</td>
+  <td class="num"><b>15.9%</b></td>
+</tr>
+
+    </tbody>
+  </table>
+</div>
+
+<!-- 인사이트 -->
+<div class="section">
+  <h2>6. 분석 인사이트</h2>
+  <div class="insight warn">
+  <h4>⚠️ 추출 정확도 보통</h4>
+  <p>전체 32.0% — 개선 여지 있음</p>
+</div>
+<div class="insight bad">
+  <h4>❌ 미완료 데이터 40%</h4>
+  <p>591건이 '-' 상태 — metrics_exporter 점검 필요</p>
+</div>
+
+</div>
+
+<!-- TOP 골프장 -->
+<div class="section">
+  <h2>7. TOP 5 골프장</h2>
+  <div class="desc">가격조정 인입 건수 기준</div>
+  <div class="top-list">
+    <div>
+      <h3 style="color:#7dd3fc;font-size:14px;margin-bottom:10px"><span class="channel-tag onsite">현장결제</span></h3>
+      <div class="rank"><span class="num">#1</span><span class="name">블랙스톤 벨포레</span><span class="cnt">121건</span></div><div class="rank"><span class="num">#2</span><span class="name">젠스필드</span><span class="cnt">67건</span></div><div class="rank"><span class="num">#3</span><span class="name">해솔리아</span><span class="cnt">66건</span></div><div class="rank"><span class="num">#4</span><span class="name">스타</span><span class="cnt">47건</span></div><div class="rank"><span class="num">#5</span><span class="name">샴발라</span><span class="cnt">34건</span></div>
+    </div>
+    <div>
+      <h3 style="color:#c4b5fd;font-size:14px;margin-bottom:10px"><span class="channel-tag deposit">예치금선결제</span></h3>
+      <div class="rank"><span class="num">#1</span><span class="name">솔트베이</span><span class="cnt">67건</span></div><div class="rank"><span class="num">#2</span><span class="name">세븐밸리</span><span class="cnt">22건</span></div><div class="rank"><span class="num">#3</span><span class="name">스카이밸리</span><span class="cnt">20건</span></div><div class="rank"><span class="num">#4</span><span class="name">파라지오</span><span class="cnt">11건</span></div><div class="rank"><span class="num">#5</span><span class="name">담양레이나</span><span class="cnt">8건</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 지표 설명 -->
+<div class="section" style="background:#0d1117">
+  <h2 style="font-size:16px">지표 가이드</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;font-size:12px;color:#9ab">
+    <div><b style="color:#7dd3fc">추출 정확도</b> = 수정없이 승인 / 최종승인 — LLM이 정확하게 추출한 비율</div>
+    <div><b style="color:#7dd3fc">자동처리율(엄격)</b> = (최종승인+수정없음) / 전체 — 미완료 포함, 가장 보수적</div>
+    <div><b style="color:#7dd3fc">결정기준 자동처리율</b> = (최종승인+수정없음) / 결정완료 — 미완료 제외</div>
+    <div><b style="color:#7dd3fc">승인률</b> = 최종승인 / (최종승인+종료) — 운영팀이 받아들인 비율</div>
+    <div><b style="color:#7dd3fc">결정완료율</b> = (최종승인+종료) / 전체 — 데이터 정합성 지표</div>
+    <div><b style="color:#7dd3fc">처리시간</b> = 인입 → 최종처리 평균 (운영팀 응답 포함)</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const months = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04"];
+const onsiteTotals = [75, 125, 343, 613, 145];
+const onsiteAuto = [32.0, 9.6, 6.1, 9.8, 12.4];
+const depositTotals = [0, 6, 30, 117, 44];
+const depositAuto = [0, 0.0, 3.3, 12.0, 15.9];
+
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: '현장결제 건수',
+        data: onsiteTotals,
+        backgroundColor: 'rgba(59,130,246,0.6)',
+        borderRadius: 4,
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        label: '예치금선결제 건수',
+        data: depositTotals,
+        backgroundColor: 'rgba(168,85,247,0.6)',
+        borderRadius: 4,
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        label: '현장결제 자동처리율',
+        data: onsiteAuto,
+        type: 'line',
+        borderColor: '#60a5fa',
+        backgroundColor: '#60a5fa',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.3,
+        yAxisID: 'y1',
+        order: 1,
+      },
+      {
+        label: '예치금선결제 자동처리율',
+        data: depositAuto,
+        type: 'line',
+        borderColor: '#c084fc',
+        backgroundColor: '#c084fc',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.3,
+        yAxisID: 'y1',
+        order: 1,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#cdd', font: { size: 11 } } },
+    },
+    scales: {
+      x: { ticks: { color: '#9ab' }, grid: { color: '#1f2733' } },
+      y: {
+        position: 'left',
+        title: { display: true, text: '건수', color: '#9ab' },
+        ticks: { color: '#9ab' },
+        grid: { color: '#1f2733' },
+      },
+      y1: {
+        position: 'right',
+        title: { display: true, text: '자동처리율 (%)', color: '#9ab' },
+        ticks: { color: '#9ab' },
+        grid: { display: false },
+        min: 0,
+        max: 50,
+      },
+    },
+  },
+});
+
+// 필드별 정확도 가로막대 차트
+const fieldLabels = ["bookName", "weekBit", "visitorCnt", "bookETime", "bookSTime", "courseSeq", "courseName", "bookEDate", "bookSDate", "greenFeeDC", "greenFeeNO", "golfInfoName", "holeCnt", "golfInfoSeq", "maxVisitorCnt"];
+const fieldValues = [66.5, 81.9, 87.9, 91.5, 92.3, 94.2, 94.2, 95.9, 97.3, 97.9, 98.0, 99.3, 99.8, 100.0, 100.0];
+const fieldColors = fieldValues.map(v => v >= 95 ? '#4ade80' : v >= 85 ? '#fbbf24' : v >= 60 ? '#f97316' : '#f87171');
+
+new Chart(document.getElementById('fieldAccChart'), {
+  type: 'bar',
+  data: {
+    labels: fieldLabels,
+    datasets: [{
+      label: '정확도 (%)',
+      data: fieldValues,
+      backgroundColor: fieldColors,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ctx.parsed.x + '%' } },
+    },
+    scales: {
+      x: {
+        min: 0, max: 100,
+        ticks: { color: '#9ab', callback: (v) => v + '%' },
+        grid: { color: '#1f2733' },
+      },
+      y: {
+        ticks: { color: '#cdd', font: { size: 11 } },
+        grid: { display: false },
+      },
+    },
+  },
+});
+</script>
+</body>
+</html>
